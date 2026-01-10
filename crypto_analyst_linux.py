@@ -295,7 +295,7 @@ def job():
     prices_text = get_crypto_prices()
     news_text = get_latest_news_headlines()
     
-    # ★ここを修正しました (tweet -> tweet_text に統一)
+    # 変数名を修正
     tweet_text = generate_analysis_tweet(prices_text, news_text)
     
     if tweet_text:
@@ -319,30 +319,41 @@ def job():
         log("ツイート生成に失敗したためスキップします。")
 
 # ==========================================
-# メイン処理 (タイムゾーン自動補正付き)
+# メイン処理 (タイムゾーン自動補正・スケジュール確認付き)
 # ==========================================
 def main():
-    log("=== AI Crypto Analyst Bot (Linux Mode v3.4 Fix-Var) Started ===")
+    log("=== AI Crypto Analyst Bot (Linux Mode v3.8 Time-Check) Started ===")
     
-    # サーバーの時刻がUTC(世界標準時)かどうかチェック
+    # サーバーの現在時刻を確認
     now = datetime.datetime.now()
     utcnow = datetime.datetime.utcnow()
     # 差が1分未満ならサーバーはUTC設定とみなす
     is_utc = abs((now - utcnow).total_seconds()) < 60
     
+    log(f"サーバー現在時刻: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+
     if is_utc:
         log("🕒 サーバーはUTC(世界標準時)設定です。日本時間(JST)に合わせてスケジュールを自動調整します。")
         # JST 08:30 -> UTC 23:30 (前日)
         schedule.every().day.at("23:30").do(job)
-        # JST 18:30 -> UTC 09:30
+        # JST 12:30 -> UTC 03:30 (当日)
+        schedule.every().day.at("03:30").do(job)
+        # JST 18:30 -> UTC 09:30 (当日)
         schedule.every().day.at("09:30").do(job)
-        log("設定時刻(UTC): 23:30(JST 08:30), 09:30(JST 18:30)")
+        log("設定時刻(UTC): 23:30(JST 08:30), 03:30(JST 12:30), 09:30(JST 18:30)")
     else:
         log("🕒 サーバーはJST(日本時間)設定と判定しました。そのままの時刻で設定します。")
         schedule.every().day.at("08:30").do(job)
+        schedule.every().day.at("12:30").do(job)
         schedule.every().day.at("18:30").do(job)
     
     # job() # テスト用
+
+    # 次回実行予定を表示
+    log("--- 次回実行スケジュール ---")
+    for j in schedule.get_jobs():
+        log(f"次回実行: {j.next_run.strftime('%Y-%m-%d %H:%M:%S')}")
+    log("----------------------------")
 
     log("スケジュール待機中...")
     while True:

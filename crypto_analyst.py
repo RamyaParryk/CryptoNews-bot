@@ -307,9 +307,22 @@ def job():
 
 if __name__ == "__main__":
     try:
-        print("AI相場分析Bot (Windows v3.4 Fix-Var) 起動")
+        print("AI相場分析Bot (Windows v3.6 Time-Check) 起動")
+        
+        # PCの現在時刻を表示（確認用）
+        now = datetime.datetime.now()
+        print(f"PCの現在時刻: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        # スケジュール登録
         schedule.every().day.at("08:30").do(job)
+        schedule.every().day.at("12:30").do(job)
         schedule.every().day.at("18:30").do(job)
+        
+        # 次回実行予定を表示
+        print("\n--- スケジュール設定状況 ---")
+        for j in schedule.get_jobs():
+            print(f"次回実行: {j.next_run.strftime('%Y-%m-%d %H:%M:%S')}")
+        print("----------------------------\n")
         
         # テスト実行（初回のみ）
         print("起動時テストを実行します...")
