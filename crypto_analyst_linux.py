@@ -153,8 +153,9 @@ IGNORE_KEYWORDS = [
 def get_crypto_prices():
     """CoinGeckoから主要通貨の価格と変動率を取得"""
     url = "https://api.coingecko.com/api/v3/simple/price"
+    # 主要5通貨 + ミーム(DOGE) + AI(FET) + DeFi(UNI) + GameFi(IMX) + Gold(XAUT) + Privacy(XMR)
     params = {
-        "ids": "bitcoin,ethereum,ripple,solana,binancecoin",
+        "ids": "bitcoin,ethereum,ripple,solana,binancecoin,dogecoin,fetch-ai,uniswap,immutable-x,tether-gold,monero",
         "vs_currencies": "jpy",
         "include_24hr_change": "true"
     }
@@ -175,6 +176,12 @@ def get_crypto_prices():
         text += add_coin_data("ripple", "XRP")
         text += add_coin_data("solana", "SOL")
         text += add_coin_data("binancecoin", "BNB")
+        text += add_coin_data("dogecoin", "DOGE")
+        text += add_coin_data("fetch-ai", "FET")
+        text += add_coin_data("uniswap", "UNI")
+        text += add_coin_data("immutable-x", "IMX")
+        text += add_coin_data("tether-gold", "Gold(XAUT)")
+        text += add_coin_data("monero", "XMR")
         
         return text
     except Exception as e:
@@ -292,11 +299,11 @@ def job():
         log(f"❌ エラー: X APIキーが設定されていません。{ENV_FILE} を確認してください。")
         return
 
-    prices_text = get_crypto_prices()
-    news_text = get_latest_news_headlines()
+    prices = get_crypto_prices()
+    news = get_latest_news_headlines()
     
-    # 変数名を修正
-    tweet_text = generate_analysis_tweet(prices_text, news_text)
+    # tweet_text に統一
+    tweet_text = generate_analysis_tweet(prices, news)
     
     if tweet_text:
         log("--- 生成されたツイート ---")
@@ -318,11 +325,15 @@ def job():
     else:
         log("ツイート生成に失敗したためスキップします。")
 
+# ★追加機能: 1時間ごとの生存確認ログ
+def heartbeat():
+    log(f"💓 生存確認: 正常稼働中 (サーバー現在時刻: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')})")
+
 # ==========================================
 # メイン処理 (タイムゾーン自動補正・スケジュール確認付き)
 # ==========================================
 def main():
-    log("=== AI Crypto Analyst Bot (Linux Mode v3.8 Time-Check) Started ===")
+    log("=== AI Crypto Analyst Bot (Linux Mode v4.1 Full-Coins) Started ===")
     
     # サーバーの現在時刻を確認
     now = datetime.datetime.now()
@@ -347,7 +358,8 @@ def main():
         schedule.every().day.at("12:30").do(job)
         schedule.every().day.at("18:30").do(job)
     
-    # job() # テスト用
+    # ★追加: 生存確認を1時間ごとに実行
+    schedule.every(1).hours.do(heartbeat)
 
     # 次回実行予定を表示
     log("--- 次回実行スケジュール ---")

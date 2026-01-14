@@ -150,8 +150,9 @@ IGNORE_KEYWORDS = [
 def get_crypto_prices():
     """CoinGeckoから主要通貨の価格を取得"""
     url = "https://api.coingecko.com/api/v3/simple/price"
+    # 主要5通貨 + ミーム(DOGE) + AI(FET) + DeFi(UNI) + GameFi(IMX) + Gold(XAUT) + Privacy(XMR)
     params = {
-        "ids": "bitcoin,ethereum,ripple,solana,binancecoin",
+        "ids": "bitcoin,ethereum,ripple,solana,binancecoin,dogecoin,fetch-ai,uniswap,immutable-x,tether-gold,monero",
         "vs_currencies": "jpy",
         "include_24hr_change": "true"
     }
@@ -171,6 +172,12 @@ def get_crypto_prices():
         text += add_coin("ripple", "XRP")
         text += add_coin("solana", "SOL")
         text += add_coin("binancecoin", "BNB")
+        text += add_coin("dogecoin", "DOGE")
+        text += add_coin("fetch-ai", "FET")
+        text += add_coin("uniswap", "UNI")
+        text += add_coin("immutable-x", "IMX")
+        text += add_coin("tether-gold", "Gold(XAUT)")
+        text += add_coin("monero", "XMR")
         return text
     except Exception as e:
         print(f"価格取得エラー: {e}")
@@ -305,30 +312,36 @@ def job():
     else:
         print("スキップします。")
 
+# ★追加機能: 1時間ごとの生存確認ログ
+def heartbeat():
+    print(f"[{datetime.datetime.now()}] 💓 生存確認: 正常稼働中")
+
 if __name__ == "__main__":
     try:
-        print("AI相場分析Bot (Windows v3.6 Time-Check) 起動")
+        print("AI相場分析Bot (Windows v4.1 Full-Coins) 起動")
         
-        # PCの現在時刻を表示（確認用）
+        # PCの現在時刻を表示
         now = datetime.datetime.now()
         print(f"PCの現在時刻: {now.strftime('%Y-%m-%d %H:%M:%S')}")
         
-        # スケジュール登録
         schedule.every().day.at("08:30").do(job)
         schedule.every().day.at("12:30").do(job)
         schedule.every().day.at("18:30").do(job)
         
-        # 次回実行予定を表示
-        print("\n--- スケジュール設定状況 ---")
-        for j in schedule.get_jobs():
-            print(f"次回実行: {j.next_run.strftime('%Y-%m-%d %H:%M:%S')}")
-        print("----------------------------\n")
+        # 生存確認を1時間ごとに実行
+        schedule.every(1).hours.do(heartbeat)
         
         # テスト実行（初回のみ）
         print("起動時テストを実行します...")
         job()
 
-        print("\nスケジュール待機中... (画面を閉じると停止します)")
+        # 次回実行予定を表示
+        print("\n--- 次回実行スケジュール ---")
+        for j in schedule.get_jobs():
+            print(f"次回実行: {j.next_run.strftime('%Y-%m-%d %H:%M:%S')}")
+        print("----------------------------\n")
+
+        print("スケジュール待機中... (画面を閉じると停止します)")
         while True:
             schedule.run_pending()
             time.sleep(60)
