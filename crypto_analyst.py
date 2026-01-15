@@ -233,7 +233,10 @@ def generate_analysis_tweet(prices, news):
         "アルトコインの個別材料やオンチェーンデータの動きに注目",
         "投資家の恐怖・強欲指数（センチメント）や市場の雰囲気を読み解く",
         "ダウンサイドリスク（下落の可能性）を警戒した慎重なシナリオ分析",
-        "長期的なファンダメンタルズに基づいたポジティブな展望"
+        "長期的なファンダメンタルズに基づいたポジティブな展望",
+        "移動平均線やサポートラインなど、テクニカル分析に基づいたチャート視点",
+        "ETFフローやクジラ（大口投資家）の資金動向に注目した分析",
+        "今盛り上がっている特定のセクター（AI、ミーム等）やテーマ株にフォーカスした分析"
     ]
     current_angle = random.choice(angles)
     print(f"今回の分析テーマ: {current_angle}")
@@ -312,24 +315,21 @@ def job():
     else:
         print("スキップします。")
 
-# ★追加機能: 1時間ごとの生存確認ログ
-def heartbeat():
-    print(f"[{datetime.datetime.now()}] 💓 生存確認: 正常稼働中")
-
 if __name__ == "__main__":
     try:
-        print("AI相場分析Bot (Windows v4.1 Full-Coins) 起動")
+        print("AI相場分析Bot (Windows v4.3 5-Times) 起動")
         
         # PCの現在時刻を表示
         now = datetime.datetime.now()
         print(f"PCの現在時刻: {now.strftime('%Y-%m-%d %H:%M:%S')}")
         
-        schedule.every().day.at("08:30").do(job)
-        schedule.every().day.at("12:30").do(job)
-        schedule.every().day.at("18:30").do(job)
+        schedule.every().day.at("01:45").do(job)
+        schedule.every().day.at("07:45").do(job)
+        schedule.every().day.at("11:45").do(job)
+        schedule.every().day.at("17:45").do(job)
+        schedule.every().day.at("21:45").do(job)
         
-        # 生存確認を1時間ごとに実行
-        schedule.every(1).hours.do(heartbeat)
+        # 生存確認ログのスケジュール登録は削除
         
         # テスト実行（初回のみ）
         print("起動時テストを実行します...")

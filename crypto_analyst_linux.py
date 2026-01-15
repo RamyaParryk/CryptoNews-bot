@@ -153,7 +153,6 @@ IGNORE_KEYWORDS = [
 def get_crypto_prices():
     """CoinGeckoから主要通貨の価格と変動率を取得"""
     url = "https://api.coingecko.com/api/v3/simple/price"
-    # 主要5通貨 + ミーム(DOGE) + AI(FET) + DeFi(UNI) + GameFi(IMX) + Gold(XAUT) + Privacy(XMR)
     params = {
         "ids": "bitcoin,ethereum,ripple,solana,binancecoin,dogecoin,fetch-ai,uniswap,immutable-x,tether-gold,monero",
         "vs_currencies": "jpy",
@@ -240,7 +239,10 @@ def generate_analysis_tweet(prices, news):
         "アルトコインの個別材料やオンチェーンデータの動きに注目",
         "投資家の恐怖・強欲指数（センチメント）や市場の雰囲気を読み解く",
         "ダウンサイドリスク（下落の可能性）を警戒した慎重なシナリオ分析",
-        "長期的なファンダメンタルズに基づいたポジティブな展望"
+        "長期的なファンダメンタルズに基づいたポジティブな展望",
+        "移動平均線やサポートラインなど、テクニカル分析に基づいたチャート視点",
+        "ETFフローやクジラ（大口投資家）の資金動向に注目した分析",
+        "今盛り上がっている特定のセクター（AI、ミーム等）やテーマ株にフォーカスした分析"
     ]
     current_angle = random.choice(analysis_angles)
     log(f"今回の分析テーマ: {current_angle}")
@@ -302,7 +304,6 @@ def job():
     prices = get_crypto_prices()
     news = get_latest_news_headlines()
     
-    # tweet_text に統一
     tweet_text = generate_analysis_tweet(prices, news)
     
     if tweet_text:
@@ -325,15 +326,11 @@ def job():
     else:
         log("ツイート生成に失敗したためスキップします。")
 
-# ★追加機能: 1時間ごとの生存確認ログ
-def heartbeat():
-    log(f"💓 生存確認: 正常稼働中 (サーバー現在時刻: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')})")
-
 # ==========================================
 # メイン処理 (タイムゾーン自動補正・スケジュール確認付き)
 # ==========================================
 def main():
-    log("=== AI Crypto Analyst Bot (Linux Mode v4.1 Full-Coins) Started ===")
+    log("=== AI Crypto Analyst Bot (Linux Mode v4.3 5-Times) Started ===")
     
     # サーバーの現在時刻を確認
     now = datetime.datetime.now()
@@ -345,21 +342,28 @@ def main():
 
     if is_utc:
         log("🕒 サーバーはUTC(世界標準時)設定です。日本時間(JST)に合わせてスケジュールを自動調整します。")
-        # JST 08:30 -> UTC 23:30 (前日)
-        schedule.every().day.at("23:30").do(job)
-        # JST 12:30 -> UTC 03:30 (当日)
-        schedule.every().day.at("03:30").do(job)
-        # JST 18:30 -> UTC 09:30 (当日)
-        schedule.every().day.at("09:30").do(job)
-        log("設定時刻(UTC): 23:30(JST 08:30), 03:30(JST 12:30), 09:30(JST 18:30)")
+        # UTCとJSTの時差は-9時間
+        # JST 01:45 -> UTC 16:45 (前日)
+        schedule.every().day.at("16:45").do(job)
+        # JST 07:45 -> UTC 22:45 (前日)
+        schedule.every().day.at("22:45").do(job)
+        # JST 11:45 -> UTC 02:45 (当日)
+        schedule.every().day.at("02:45").do(job)
+        # JST 17:45 -> UTC 08:45 (当日)
+        schedule.every().day.at("08:45").do(job)
+        # JST 21:45 -> UTC 12:45 (当日)
+        schedule.every().day.at("12:45").do(job)
+        
+        log("設定時刻(UTC): 16:45(JST 01:45), 22:45(JST 07:45), 02:45(JST 11:45), 08:45(JST 17:45), 12:45(JST 21:45)")
     else:
         log("🕒 サーバーはJST(日本時間)設定と判定しました。そのままの時刻で設定します。")
-        schedule.every().day.at("08:30").do(job)
-        schedule.every().day.at("12:30").do(job)
-        schedule.every().day.at("18:30").do(job)
+        schedule.every().day.at("01:45").do(job)
+        schedule.every().day.at("07:45").do(job)
+        schedule.every().day.at("11:45").do(job)
+        schedule.every().day.at("17:45").do(job)
+        schedule.every().day.at("21:45").do(job)
     
-    # ★追加: 生存確認を1時間ごとに実行
-    schedule.every(1).hours.do(heartbeat)
+    # 生存確認(heartbeat)は削除
 
     # 次回実行予定を表示
     log("--- 次回実行スケジュール ---")

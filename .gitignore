@@ -1,4 +1,6 @@
 X-GoogleAPI.env
 linuxのBot用.txt
 TwitterのAPI.txt
-3.  これで、GitHubへの公開ボタンを押しても、キーが書かれたファイルだけは除外される
+analyst_bot.log
+
+※GitHubへの公開ボタンを押しても書かれたファイルは除外
