@@ -229,9 +229,9 @@ def generate_analysis_tweet(prices, news):
 
     genai.configure(api_key=GEMINI_API_KEY)
     
-    # モデル優先順: ユーザー発見のPreview版を最優先に追加
-    # 3.0系がダメなら2.0にフォールバック
-    models_to_try = ['gemini-3-flash-preview', 'gemini-2.0-flash', 'gemini-3.0-flash']
+    # ★ここを修正: Gemini 3 Pro を最優先、次に 3 Flash
+    # 2.0系はリストから削除しました
+    models_to_try = ['gemini-3-pro-preview', 'gemini-3-flash-preview']
 
     # 分析の切り口をランダム化
     analysis_angles = [
@@ -330,7 +330,7 @@ def job():
 # メイン処理 (タイムゾーン自動補正・スケジュール確認付き)
 # ==========================================
 def main():
-    log("=== AI Crypto Analyst Bot (Linux Mode v4.3 5-Times) Started ===")
+    log("=== AI Crypto Analyst Bot (Linux Mode v4.4 Gemini3-Pro) Started ===")
     
     # サーバーの現在時刻を確認
     now = datetime.datetime.now()
@@ -343,18 +343,12 @@ def main():
     if is_utc:
         log("🕒 サーバーはUTC(世界標準時)設定です。日本時間(JST)に合わせてスケジュールを自動調整します。")
         # UTCとJSTの時差は-9時間
-        # JST 01:45 -> UTC 16:45 (前日)
-        schedule.every().day.at("16:45").do(job)
-        # JST 07:45 -> UTC 22:45 (前日)
-        schedule.every().day.at("22:45").do(job)
-        # JST 11:45 -> UTC 02:45 (当日)
-        schedule.every().day.at("02:45").do(job)
-        # JST 17:45 -> UTC 08:45 (当日)
-        schedule.every().day.at("08:45").do(job)
-        # JST 21:45 -> UTC 12:45 (当日)
-        schedule.every().day.at("12:45").do(job)
-        
-        log("設定時刻(UTC): 16:45(JST 01:45), 22:45(JST 07:45), 02:45(JST 11:45), 08:45(JST 17:45), 12:45(JST 21:45)")
+        schedule.every().day.at("16:45").do(job) # JST 01:45
+        schedule.every().day.at("22:45").do(job) # JST 07:45
+        schedule.every().day.at("02:45").do(job) # JST 11:45
+        schedule.every().day.at("08:45").do(job) # JST 17:45
+        schedule.every().day.at("12:45").do(job) # JST 21:45
+        log("設定時刻(UTC): 16:45, 22:45, 02:45, 08:45, 12:45")
     else:
         log("🕒 サーバーはJST(日本時間)設定と判定しました。そのままの時刻で設定します。")
         schedule.every().day.at("01:45").do(job)
@@ -363,8 +357,6 @@ def main():
         schedule.every().day.at("17:45").do(job)
         schedule.every().day.at("21:45").do(job)
     
-    # 生存確認(heartbeat)は削除
-
     # 次回実行予定を表示
     log("--- 次回実行スケジュール ---")
     for j in schedule.get_jobs():

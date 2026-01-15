@@ -225,8 +225,8 @@ def generate_analysis_tweet(prices, news):
 
     genai.configure(api_key=GEMINI_API_KEY)
     
-    # モデル優先順
-    models_to_try = ['gemini-3-flash-preview', 'gemini-2.0-flash', 'gemini-3.0-flash']
+    # モデル優先順: 2.0系を削除し、3系のみを使用
+    models_to_try = ['gemini-3-pro-preview', 'gemini-3-flash-preview']
 
     angles = [
         "マクロ経済（FOMC、雇用統計、株価）と仮想通貨の連動性を鋭く分析",
@@ -317,19 +317,18 @@ def job():
 
 if __name__ == "__main__":
     try:
-        print("AI相場分析Bot (Windows v4.3 5-Times) 起動")
+        print("AI相場分析Bot (Windows v4.4 Gemini3-Pro) 起動")
         
         # PCの現在時刻を表示
         now = datetime.datetime.now()
         print(f"PCの現在時刻: {now.strftime('%Y-%m-%d %H:%M:%S')}")
         
+        # スケジュール登録
         schedule.every().day.at("01:45").do(job)
         schedule.every().day.at("07:45").do(job)
         schedule.every().day.at("11:45").do(job)
         schedule.every().day.at("17:45").do(job)
         schedule.every().day.at("21:45").do(job)
-        
-        # 生存確認ログのスケジュール登録は削除
         
         # テスト実行（初回のみ）
         print("起動時テストを実行します...")
