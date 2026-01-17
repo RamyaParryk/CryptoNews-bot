@@ -1,3 +1,7 @@
+<div align="right">
+<strong>日本語</strong> | <a href="README_en.md">English</a>
+</div>
+
 <h1>AI Crypto Analyst Bot 📈🤖</h1>
 
 仮想通貨の価格データと最新ニュースを収集し、Google Gemini AI (3.0 Pro/Flash Preview) が相場を分析して X (旧Twitter) に自動投稿するPython製ボットです。
