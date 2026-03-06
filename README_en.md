@@ -40,7 +40,7 @@ To run this bot, you need the following four API keys:
 </li>
 <li><b>CoinGecko API Key</b> (Free Demo Plan)
 <ul>
-<li>Get from: <a href="https://console.coingecko.com/">CoinGecko Developer Console</a></li>
+<li>Get from: <a href="https://www.coingecko.com/ja/api/pricing">CoinGecko Developer Console</a></li>
 </ul>
 </li>
 </ol>
