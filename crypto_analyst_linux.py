@@ -137,7 +137,7 @@ def get_crypto_prices():
         headers["x-cg-demo-api-key"] = COINGECKO_API_KEY
 
     try:
-        response = requests.get(url, headers=headers, params=params, timeout=10).json()
+        data = requests.get(url, headers=headers, params=params, timeout=10).json()
         text = "【主要銘柄の価格データ】\n"
         for c, s in [("bitcoin","BTC"), ("ethereum","ETH"), ("solana","SOL")]:
             if c in data: 
