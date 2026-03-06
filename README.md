@@ -2,35 +2,45 @@
 <strong>日本語</strong> | <a href="README_en.md">English</a>
 </div>
 
-<h1>AI Crypto Analyst Bot (Market-Vibe Edition) 📈🤖</h1>
+<h1>AI Crypto Analyst Bot (Trend Deep-Dive Edition) 📈🤖</h1>
 
-仮想通貨の価格データと世界中から集めた大量のニュースストリームをスキャンし、Google Gemini AI (最新の 3.1 Pro Preview) が市場全体の「空気感（センチメント）」を分析して X (旧Twitter) に自動投稿するPython製ボットです。
+仮想通貨のトレンド検索データと熱量（Vote）付きのホットニュースをスキャンし、Google Gemini AI (最新の 3.1 Pro Preview) が「いま一番面白い特定のトピック（ミームコインや注目ニュース等）」を深掘りして X (旧Twitter) に自動投稿するPython製ボットです。
 
 Windows (デスクトップ) と Linux (Umbrelサーバー等) の両方に対応し、キャラクター設定や口調を外部ファイルから自由に変更可能です。
 
 <h2>✨ 特徴</h2>
 
 <ul>
-<li><b>AIによる市況俯瞰分析:</b> 単一のニュースを解説するのではなく、<b>Gemini 3.1 Pro</b> が大量の情報から「いま市場はどういう空気か？（強気、警戒、資金循環など）」を読み取り、独自の相場観を語ります。</li>
-<li><b>超・広域情報収集:</b> CryptoPanic, Google News (日英広域), Investing.com 等のアグリゲーターを使用し、一度に最大50件のニュース見出しをAIに流し込みます。</li>
-<li><b>プロンプト外部化:</b> キャラクター設定やAIへの指示内容を <code>prompt.txt</code> に切り出し。Botを再起動させることなく、テキストファイルを編集するだけでいつでも口調や分析スタンスを変更できます。</li>
-<li><b>プライバシー重視:</b> APIキーは <code>X-GoogleAPI.env</code>、独自の指示内容は <code>prompt.txt</code> に保存。コード内に機密情報やノウハウを残さず、安全に GitHub へ公開できます。</li>
+<li><b>AIによる一点突破の深掘り分析:</b> 市場全体の無難な要約（天気予報）ではなく、<b>Gemini 3.1 Pro</b> が「なぜ今この草コインが検索されているのか」「このニュースの裏にある思惑は何か」など、特定の話題にフォーカスして鋭い私見を語ります。</li>
+<li><b>熱量とトレンドの感知:</b> CryptoPanic API (v2) によるユーザーの投票数（強気/重要）データと、CoinGecko API による世界中の「検索急増トレンド銘柄」を組み合わせ、常に鮮度の高い話題をAIに供給します。</li>
+<li><b>堅牢なエラー対策:</b> X API特有のサーバー混雑エラー（503 Service Unavailable等）に対して、プログラムをクラッシュさせずに数分待機して自動リトライする粘り強いロジックを搭載。</li>
+<li><b>プロンプト外部化とプライバシー:</b> キャラクター設定やAIへの指示内容は <code>prompt.txt</code> に、APIキーは <code>X-GoogleAPI.env</code> に完全分離。機密情報や独自のプロンプト（ノウハウ）を漏らすことなく、安全に GitHub へ公開できます。</li>
 </ul>
 
 <h2>⚙️ 事前準備 (APIキーの取得)</h2>
 
-このBotを動かすには、以下の2つのAPIキーが必要です。
+このBotを動かすには、以下の4つのAPIキーが必要です。
 
 <ol>
-<li><b>X (Twitter) API Keys</b> (Free TierでOK)
+<li><b>X (Twitter) API Keys</b> (無料のPay-Per-Use枠でOK)
 <ul>
-<li>取得先: <a href="https://developer.x.com/en/portal/dashboard">X Developer Portal</a></li>
+<li>取得先: <a href="https://console.x.com/">X Developer Console</a></li>
 <li>必要な権限: <b>Read and Write</b> (設定変更後、必ずトークンをRegenerateしてください)</li>
 </ul>
 </li>
 <li><b>Google Gemini API Key</b> (無料枠でOK)
 <ul>
 <li>取得先: <a href="https://aistudio.google.com/app/apikey">Google AI Studio</a></li>
+</ul>
+</li>
+<li><b>CryptoPanic API Key</b> (auth_token)
+<ul>
+<li>取得先: <a href="https://cryptopanic.com/developers/api/">CryptoPanic Developer API</a></li>
+</ul>
+</li>
+<li><b>CoinGecko API Key</b> (無料のDemoプラン)
+<ul>
+<li>取得先: <a href="https://console.coingecko.com/">CoinGecko Developer Console</a></li>
 </ul>
 </li>
 </ol>
@@ -54,32 +64,32 @@ X_API_SECRET=あなたのAPI_SECRET
 X_ACCESS_TOKEN=あなたのACCESS_TOKEN
 X_ACCESS_SECRET=あなたのACCESS_SECRET
 
-Google Gemini Settings
+# Google Gemini Settings
+GEMINI_API_KEY=あなたのGEMINI_API_KEY
 
-GEMINI_API_KEY=あなたのGEMINI_API_KEY</code></pre>
+# Data Source APIs
+CRYPTOPANIC_API_KEY=あなたのCRYPTOPANIC_AUTH_TOKEN
+COINGECKO_API_KEY=あなたのCOINGECKO_DEMO_API_KEY</code></pre>
 
 <b>② 指示内容設定:</b> <code>prompt.txt</code>
 AIへの指示（口調、キャラクター、分析のルール）を記述します。
-※ <code>{prices}</code> と <code>{news}</code> はプログラムがデータを挿入する目印なので<b>必ず含めてください</b>。
+※ <code>{market_data}</code> はプログラムが統合データを挿入する目印なので<b>必ず含めてください</b>。
 
 <pre><code>あなたは経験豊富で知的な若い女性の専業クリプトトレーダーです。
-以下の「現在の価格データ」と「世界中から集めた大量のニュース見出し」をスキャンし、今の仮想通貨市場全体の【空気感（センチメント）】を読み取ってください。
+以下の「最新の市場データ（検索トレンド銘柄、価格、コミュニティの熱量付きホットニュース）」を読み込み、そこから【今一番面白そうな特定の1つのトピック（銘柄やニュース）】をピックアップしてください。
 
-【価格データ】
-{prices}
-
-【市場のニュースストリーム】
-{news}
+【最新の市場データ】
+{market_data}
 
 【あなたの思考・出力プロセス（厳守）】
-特定の1つのニュースだけを解説する「ニュースキャスター」にならないでください。
-大量の情報から市場の全体的な【市況感・バイブス】を読み取ってください。
-その読み取った相場観を元に、プロのトレーダーとして、あなたのフォロワーに向けた【自由な相場ツイート】を作成してください。
+市場全体の無難な要約（天気予報）は絶対にしないでください。
+データの中から1つのテーマだけに焦点を絞り、「なぜ今これがウケているのか」など、プロのトレーダーとしての【鋭い私見・独自の考察】を展開してください。
+その考察を元に、フォロワーに向けた【自由な相場ツイート】を作成してください。
 
 【出力形式】
 120文字以内で簡潔に（ハッシュタグ込み140文字未満）。
 一人称は「私」、語尾は「〜わ」「〜わね」等、上品かつ知的な女性の口調。
-関連するハッシュタグを最後に付ける。</code></pre>
+関連するハッシュタグ（選んだ銘柄のティッカーなど）を最後に付ける。</code></pre>
 
 <hr>
 
@@ -104,12 +114,10 @@ AIへの指示（口調、キャラクター、分析のルール）を記述し
 python3 -m venv venv
 source venv/bin/activate
 
-ライブラリのインストール
+# ライブラリのインストール
+pip install google-generativeai requests tweepy schedule python-dotenv beautifulsoup4
 
-pip install google-generativeai requests feedparser tweepy schedule python-dotenv beautifulsoup4
-
-実行 (ログは analyst_bot.log に保存されます)
-
+# 実行 (ログは analyst_bot.log に保存されます)
 nohup python3 crypto_analyst_linux.py > /dev/null 2>&1 &</code></pre>
 
 <ul>
@@ -119,9 +127,9 @@ nohup python3 crypto_analyst_linux.py > /dev/null 2>&1 &</code></pre>
 <h2>🕒 更新履歴 (Changelog)</h2>
 
 <ul>
+<li><b>v7.0</b>: 「Trend Deep-Dive Edition」へ進化。CryptoPanic公式API(v2)とCoinGecko APIを導入し、投票熱量とトレンド銘柄の取得に対応。X APIの503エラーに対する自動リトライ機能を実装。プロンプトのデータ変数を <code>{market_data}</code> に統合。</li>
 <li><b>v6.6</b>: X APIの認証方法を修正（引数の明示化）。Windows/Linux両環境での安定稼働を確認。</li>
-<li><b>v6.0 - v6.4</b>: 「市況俯瞰・自由詠唱版」へ大幅アップデート。特定のニュースサイト依存を廃止し、アグリゲーターによる超・広域情報収集に変更。プロンプトを <code>prompt.txt</code> に外部化。使用AIモデルを <b>Gemini 3.1 Pro Preview</b> にアップデート。</li>
-<li><b>v4.x以前</b>: 特定のニュースサイトから記事をピックアップして要約する従来型のロジック。</li>
+<li><b>v6.0 - v6.4</b>: 「市況俯瞰・自由詠唱版」へのアップデート。プロンプトを <code>prompt.txt</code> に外部化。</li>
 </ul>
 
 <h2>⚠️ 免責事項</h2>
