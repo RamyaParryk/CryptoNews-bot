@@ -40,7 +40,7 @@ def log(message):
 # 自動インストール・ライブラリ読み込み
 # ==========================================
 def install_libraries():
-    required_libs = ["google-generativeai", "requests", "feedparser", "tweepy", "schedule", "python-dotenv", "beautifulsoup4"]
+    required_libs = ["google-generativeai", "requests", "tweepy", "schedule", "python-dotenv", "beautifulsoup4"]
     for lib in required_libs:
         try:
             m = "google.generativeai" if lib == "google-generativeai" else "dotenv" if lib == "python-dotenv" else "bs4" if lib == "beautifulsoup4" else lib
@@ -51,12 +51,12 @@ def install_libraries():
             except Exception as e: log(f"Failed to install {lib}: {e}")
 
 try:
-    import requests, feedparser, tweepy, schedule, google.generativeai as genai
+    import requests, tweepy, schedule, google.generativeai as genai
     from dotenv import load_dotenv
     from bs4 import BeautifulSoup
 except ImportError:
     install_libraries()
-    import requests, feedparser, tweepy, schedule, google.generativeai as genai
+    import requests, tweepy, schedule, google.generativeai as genai
     from dotenv import load_dotenv
     from bs4 import BeautifulSoup
 
@@ -77,6 +77,8 @@ X_API_SECRET = os.getenv("X_API_SECRET")
 X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
 X_ACCESS_SECRET = os.getenv("X_ACCESS_SECRET")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+CRYPTOPANIC_API_KEY = os.getenv("CRYPTOPANIC_API_KEY")
+COINGECKO_API_KEY = os.getenv("COINGECKO_API_KEY")
 
 def check_keys():
     keys = {
@@ -84,7 +86,8 @@ def check_keys():
         "X_API_SECRET": X_API_SECRET,
         "X_ACCESS_TOKEN": X_ACCESS_TOKEN,
         "X_ACCESS_SECRET": X_ACCESS_SECRET,
-        "GEMINI_API_KEY": GEMINI_API_KEY
+        "GEMINI_API_KEY": GEMINI_API_KEY,
+        "CRYPTOPANIC_API_KEY": CRYPTOPANIC_API_KEY
     }
     missing = [name for name, val in keys.items() if not val]
     if missing:
@@ -95,37 +98,91 @@ def check_keys():
 # ==========================================
 # 情報収集ロジック
 # ==========================================
-RSS_URLS = [
-    "https://cryptopanic.com/news/rss/", 
-    "https://news.google.com/rss/search?q=Cryptocurrency+OR+Bitcoin+OR+Ethereum&hl=en-US&gl=US&ceid=US:en",
-    "https://news.google.com/rss/search?q=仮想通貨+OR+暗号資産+OR+ビットコイン&hl=ja&gl=JP&ceid=JP:ja",
-    "https://jp.investing.com/rss/news_14.rss"
-]
+
+def get_trending_coins():
+    """CoinGeckoから「今検索されているトレンド銘柄」を取得（APIキー対応）"""
+    url = "https://api.coingecko.com/api/v3/search/trending"
+    
+    # デモ版APIキーをヘッダーにセットする（Demoプランの仕様: x-cg-demo-api-key）
+    headers = {"accept": "application/json"}
+    if COINGECKO_API_KEY:
+        headers["x-cg-demo-api-key"] = COINGECKO_API_KEY
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status() # エラーなら例外を出す
+        data = response.json()
+        
+        trending = []
+        for item in data.get("coins", [])[:3]:
+            coin = item["item"]
+            trending.append(f"{coin['name']} ({coin['symbol']})")
+            
+        return "【現在のトレンド銘柄】\n" + ", ".join(trending) + "\n\n"
+    except Exception as e:
+        log(f"⚠️ トレンド銘柄取得エラー: {e}")
+        return ""
 
 def get_crypto_prices():
+    """CoinGeckoから主要銘柄の現在価格・変動率を取得（APIキー対応）"""
     url = "https://api.coingecko.com/api/v3/simple/price"
-    params = {"ids": "bitcoin,ethereum,ripple,solana,binancecoin,dogecoin,fetch-ai,uniswap", "vs_currencies": "jpy", "include_24hr_change": "true"}
-    try:
-        data = requests.get(url, params=params, timeout=10).json()
-        text = "【価格データ】\n"
-        for c, s in [("bitcoin","BTC"), ("ethereum","ETH"), ("ripple","XRP"), ("solana","SOL"), ("dogecoin","DOGE"), ("fetch-ai","FET")]:
-            if c in data: text += f"{s}: {data[c]['jpy']}円 ({data[c]['jpy_24h_change']:.1f}%)\n"
-        return text
-    except: return "価格データ取得失敗"
+    params = {
+        "ids": "bitcoin,ethereum,solana", 
+        "vs_currencies": "jpy", 
+        "include_24hr_change": "true"
+    }
+    
+    headers = {"accept": "application/json"}
+    if COINGECKO_API_KEY:
+        headers["x-cg-demo-api-key"] = COINGECKO_API_KEY
 
-def get_market_vibe_news():
-    headlines = []
-    shuffled_urls = RSS_URLS.copy()
-    random.shuffle(shuffled_urls)
-    for url in shuffled_urls:
-        if len(headlines) >= 50: break
-        try:
-            feed = feedparser.parse(requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10).text)
-            for entry in feed.entries[:10]:
-                summary = BeautifulSoup(getattr(entry, 'summary', ''), "html.parser").get_text()[:80].replace('\n', ' ')
-                headlines.append(f"・{entry.title} ({summary})")
-        except: pass
-    return "【マーケットニュース】\n" + "\n".join(headlines)
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=10).json()
+        text = "【主要銘柄の価格データ】\n"
+        for c, s in [("bitcoin","BTC"), ("ethereum","ETH"), ("solana","SOL")]:
+            if c in data: 
+                text += f"{s}: {data[c]['jpy']:,.0f}円 ({data[c]['jpy_24h_change']:.1f}%)\n"
+        return text + "\n"
+    except Exception as e:
+        log(f"⚠️ 価格取得エラー: {e}")
+        return "価格データ取得失敗\n\n"
+
+def get_trending_news():
+    """
+    【新機能】CryptoPanicの公式API (v2) から最新の注目ニュースを取得します。
+    以前のRSS(GoogleNews等)を廃止し、これ一本に絞ることで仮想通貨特有の熱量(Vote)を拾います。
+    """
+    if not CRYPTOPANIC_API_KEY:
+        return "ニュースデータなし (APIキー未設定)\n"
+
+    url = "https://cryptopanic.com/api/developer/v2/posts/"
+    params = {
+        "auth_token": CRYPTOPANIC_API_KEY,
+        "public": "true",
+        "regions": "en",        # 情報が早い英語圏をターゲット
+        "filter": "hot",        # 注目度が高い（Hot）ニュース
+        "kind": "news"
+    }
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status() 
+        data = response.json()
+        
+        headlines = []
+        # AIが処理しやすいよう上位5件に絞り、ユーザーの熱量（Vote数）を付与する
+        for item in data.get("results", [])[:5]:
+            title = item.get("title", "No Title")
+            votes = item.get("votes", {})
+            positive = votes.get("positive", 0)
+            important = votes.get("important", 0)
+            headlines.append(f"・{title} (強気: {positive}票, 重要: {important}票)")
+            
+        return "【注目の最新ホットニュース】\n" + "\n".join(headlines)
+
+    except Exception as e:
+        log(f"⚠️ ニュース取得エラー: {e}")
+        return f"ニュースの取得に失敗: {e}"
 
 def load_prompt():
     if not os.path.exists(PROMPT_FILE):
@@ -137,7 +194,8 @@ def load_prompt():
             return content if content else None
     except: return None
 
-def generate_analysis_tweet(prices, news):
+def generate_analysis_tweet(market_data):
+    """Geminiを使ってツイート本文を生成する"""
     if not GEMINI_API_KEY: return None
     genai.configure(api_key=GEMINI_API_KEY)
     
@@ -152,7 +210,8 @@ def generate_analysis_tweet(prices, news):
     for model_name in models_to_try:
         try:
             model = genai.GenerativeModel(model_name)
-            prompt = prompt_template.replace("{prices}", prices).replace("{news}", news)
+            # プロンプトの置換対象を一つにまとめる
+            prompt = prompt_template.replace("{market_data}", market_data)
             response = model.generate_content(prompt, generation_config={"temperature": 0.85})
             text = response.text.strip()
             if len(text) > 140:
@@ -167,24 +226,51 @@ def generate_analysis_tweet(prices, news):
 def job():
     log("分析を開始します...")
     if not check_keys(): return
-    p, n = get_crypto_prices(), get_market_vibe_news()
-    tweet_text = generate_analysis_tweet(p, n)
+    
+    # 3つの情報を1つのテキスト(market_data)にまとめる
+    market_data = get_trending_coins() + get_crypto_prices() + get_trending_news()
+    
+    tweet_text = generate_analysis_tweet(market_data)
+    
     if tweet_text:
         log(f"--- ツイート ---\n{tweet_text}")
-        try:
-            client = tweepy.Client(
-                consumer_key=X_API_KEY, 
-                consumer_secret=X_API_SECRET, 
-                access_token=X_ACCESS_TOKEN, 
-                access_token_secret=X_ACCESS_SECRET
-            )
-            client.create_tweet(text=tweet_text)
-            log("✅ 投稿成功！")
-        except Exception as e: log(f"❌ 投稿エラー: {e}")
-    else: log("分析をスキップしました。")
+        
+        # ==========================================
+        # Xへの投稿（503エラー対策の自動リトライ機能付き）
+        # ==========================================
+        MAX_RETRIES = 3  # 最大3回まで再チャレンジ
+        
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                client = tweepy.Client(
+                    consumer_key=X_API_KEY, 
+                    consumer_secret=X_API_SECRET, 
+                    access_token=X_ACCESS_TOKEN, 
+                    access_token_secret=X_ACCESS_SECRET
+                )
+                client.create_tweet(text=tweet_text)
+                log("✅ 投稿成功！")
+                break # 成功したらループを抜ける
+                
+            except Exception as e:
+                error_msg = str(e)
+                # 503エラー（サーバー混雑）などの場合
+                if "503" in error_msg or "Service Unavailable" in error_msg:
+                    if attempt < MAX_RETRIES:
+                        wait_time = 30 * attempt  # 1回目は30秒、2回目は60秒待機
+                        log(f"⚠️ Xサーバー混雑(503)。{wait_time}秒後にリトライします ({attempt}/{MAX_RETRIES})...")
+                        time.sleep(wait_time)
+                    else:
+                        log(f"❌ {MAX_RETRIES}回リトライしましたが、投稿できませんでした: {e}")
+                else:
+                    # その他の致命的なエラーはすぐに諦める
+                    log(f"❌ 投稿エラー: {e}")
+                    break
+    else: 
+        log("分析をスキップしました。")
 
 def main():
-    log("=== AI Crypto Analyst Bot (Linux v6.6 Fix-Auth) Started ===")
+    log("=== AI Crypto Analyst Bot (v7.0 with CryptoPanic & Retry) Started ===")
     check_keys()
     now = datetime.datetime.now()
     is_utc = abs((now - datetime.datetime.utcnow()).total_seconds()) < 60
