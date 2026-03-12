@@ -3,5 +3,6 @@ linuxのBot用.txt
 API.txt
 prompt.txt
 analyst_bot.log
+__pycache__
 
 ※GitHubへの公開ボタンを押しても書かれたファイルは除外
