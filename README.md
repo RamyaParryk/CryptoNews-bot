@@ -6,7 +6,7 @@
 
 仮想通貨のトレンド検索データと熱量（Vote）付きのホットニュースをスキャンし、Google Gemini AI (最新の 3.1 Pro Preview) が「いま一番面白い特定のトピック（ミームコインや注目ニュース等）」を深掘りして X (旧Twitter) に自動投稿するPython製ボットです。
 
-Windows (デスクトップ) と Linux (Umbrelサーバー等) の両方に対応し、キャラクター設定や口調を外部ファイルから自由に変更可能です。
+Windows (デスクトップ) と Linux (サーバー) 用の専用実行ファイルを用意しており、キャラクター設定や口調を外部ファイルから自由に変更可能です。
 
 <h2>✨ 特徴</h2>
 
@@ -93,32 +93,46 @@ AIへの指示（口調、キャラクター、分析のルール）を記述し
 
 <hr>
 
-<h2>💻 Windowsでの実行方法</h2>
+<h2>💻 Windows (デスクトップ) での実行方法</h2>
 
-コマンドプロンプト(cmd) または PowerShell を開いて実行します。
+Windows特有の文字化けエラーを防止した専用ファイル <code>crypto_analyst_x86.py</code> を使用します。
+コマンドプロンプト(cmd) または PowerShell を開いて実行してください。
 
-<pre><code>python crypto_analyst.py</code></pre>
+<pre><code># 今すぐ1回だけテスト投稿（手動実行）したい場合
+python -c "from crypto_analyst_x86 import job; job()"
+
+# スケジュール通りに継続稼働させる場合
+python crypto_analyst_x86.py</code></pre>
 
 <ul>
 <li>初回起動時に必要なライブラリが自動的にインストールされます。</li>
-<li>黒い画面が開いている間、毎日 <b>01:45, 07:45, 11:45, 17:45, 21:45</b> に自動投稿します。</li>
+<li>黒い画面が開いている間、毎日スケジュール通りに自動投稿します。</li>
 </ul>
 
 <hr>
 
-<h2>🐧 Linux (Ubuntu/Docker等) での実行方法</h2>
+<h2>🐧 Linux (Ubuntu等のサーバー環境) での実行方法</h2>
 
-バックグラウンド実行する場合の手順です。
+<code>crypto_analyst_linux.py</code> を使用します。隔離されたPython仮想環境 (venv) を使って、バックグラウンドで24時間安全に稼働させます。
 
-<pre><code># 仮想環境の作成と有効化
+<pre><code># 1. 仮想環境の作成と有効化
 python3 -m venv venv
 source venv/bin/activate
 
-# ライブラリのインストール
+# 2. ライブラリのインストール
 pip install google-generativeai requests tweepy schedule python-dotenv beautifulsoup4
 
-# 実行 (ログは analyst_bot.log に保存されます)
-nohup python3 crypto_analyst_linux.py > /dev/null 2>&1 &</code></pre>
+# 3. テスト実行（今すぐ1回だけ動かす）
+python3 -c "from crypto_analyst_linux import job; job()"
+
+# 4. 本番稼働 (PCを閉じても裏側で24時間動かし続ける)
+nohup python3 crypto_analyst_linux.py &
+
+# ログの確認方法
+tail -f analyst_bot.log
+
+# Botを停止させる方法
+pkill -f crypto_analyst_linux.py</code></pre>
 
 <ul>
 <li><b>UTC自動補正機能:</b> サーバーが世界標準時(UTC)の場合、自動的に日本時間(JST)のスケジュールに合わせて調整します。</li>
@@ -127,8 +141,8 @@ nohup python3 crypto_analyst_linux.py > /dev/null 2>&1 &</code></pre>
 <h2>🕒 更新履歴 (Changelog)</h2>
 
 <ul>
-<li><b>v7.0</b>: 「Trend Deep-Dive Edition」へ進化。CryptoPanic公式API(v2)とCoinGecko APIを導入し、投票熱量とトレンド銘柄の取得に対応。X APIの503エラーに対する自動リトライ機能を実装。プロンプトのデータ変数を <code>{market_data}</code> に統合。</li>
-<li><b>v6.6</b>: X APIの認証方法を修正（引数の明示化）。Windows/Linux両環境での安定稼働を確認。</li>
+<li><b>v7.0</b>: 「Trend Deep-Dive Edition」へ進化。CryptoPanic公式API(v2)とCoinGecko APIを導入。X APIの503エラーに対する自動リトライ機能を実装。Windows専用/Linux専用の実行ファイルに分割し、安定性を向上。</li>
+<li><b>v6.6</b>: X APIの認証方法を修正。</li>
 <li><b>v6.0 - v6.4</b>: 「市況俯瞰・自由詠唱版」へのアップデート。プロンプトを <code>prompt.txt</code> に外部化。</li>
 </ul>
 

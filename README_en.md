@@ -6,7 +6,7 @@
 
 A Python-based bot powered by Google Gemini AI (the latest <b>3.1 Pro Preview</b>) that scans trending cryptocurrency search data and hot news streams with community sentiment (votes). Instead of generic market summaries, it dives deep into specific hot topics (like meme coins or viral news) and automatically posts sharp, insightful tweets to X (formerly Twitter).
 
-Compatible with both Windows (Desktop) and Linux (Umbrel servers, etc.). Character settings and tone can be freely customized via an external text file.
+It includes dedicated execution files for both Windows (Desktop) and Linux (Servers). Character settings and tone can be freely customized via an external text file.
 
 <h2>✨ Features</h2>
 
@@ -93,32 +93,46 @@ Add relevant hashtags (like the ticker of the chosen coin) at the end.</code></p
 
 <hr>
 
-<h2>💻 How to Run on Windows</h2>
+<h2>💻 How to Run on Windows (Desktop)</h2>
 
+Use <code>crypto_analyst_x86.py</code>, which includes fixes for Windows-specific encoding errors.
 Open Command Prompt (cmd) or PowerShell and run:
 
-<pre><code>python crypto_analyst.py</code></pre>
+<pre><code># To test a single post immediately:
+python -c "from crypto_analyst_x86 import job; job()"
+
+# To run continuously on a schedule:
+python crypto_analyst_x86.py</code></pre>
 
 <ul>
 <li>Necessary libraries will be installed automatically on the first run.</li>
-<li>The bot will automatically post daily at <b>01:45, 07:45, 11:45, 17:45, 21:45</b> as long as the terminal is open.</li>
+<li>The bot will automatically post based on the schedule as long as the terminal is open.</li>
 </ul>
 
 <hr>
 
-<h2>🐧 How to Run on Linux (Ubuntu/Docker)</h2>
+<h2>🐧 How to Run on Linux (Ubuntu/Servers)</h2>
 
-Instructions for background execution on a server.
+Use <code>crypto_analyst_linux.py</code>. We recommend running it in a Python virtual environment (venv) in the background.
 
-<pre><code># Create and activate virtual environment
+<pre><code># 1. Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate
 
-# Install libraries
+# 2. Install libraries
 pip install google-generativeai requests tweepy schedule python-dotenv beautifulsoup4
 
-# Run in background (Logs are saved to analyst_bot.log)
-nohup python3 crypto_analyst_linux.py > /dev/null 2>&1 &</code></pre>
+# 3. Test execution (run once)
+python3 -c "from crypto_analyst_linux import job; job()"
+
+# 4. Run in background (keeps running even if you close SSH)
+nohup python3 crypto_analyst_linux.py &
+
+# To check live logs
+tail -f analyst_bot.log
+
+# To stop the bot
+pkill -f crypto_analyst_linux.py</code></pre>
 
 <ul>
 <li><b>UTC Auto-Correction:</b> Automatically adjusts posting times to JST schedules if the server timezone is UTC.</li>
@@ -127,9 +141,9 @@ nohup python3 crypto_analyst_linux.py > /dev/null 2>&1 &</code></pre>
 <h2>🕒 Changelog</h2>
 
 <ul>
-<li><b>v7.0</b>: Evolved to "Trend Deep-Dive Edition". Integrated CryptoPanic API (v2) and CoinGecko API to fetch community votes and trending coins. Implemented an auto-retry feature for X API 503 errors. Unified prompt data variable to <code>{market_data}</code>.</li>
-<li><b>v6.6</b>: Fixed X API authentication parameters. Confirmed stable operation on both Windows and Linux environments.</li>
-<li><b>v6.0 - v6.4</b>: Major update to the "Market-Vibe Edition." Externalized AI instructions to <code>prompt.txt</code>.</li>
+<li><b>v7.0</b>: Evolved to "Trend Deep-Dive Edition". Integrated CryptoPanic API (v2) and CoinGecko API. Implemented auto-retry for X API 503 errors. Split into dedicated x86 (Windows) and Linux scripts for better stability.</li>
+<li><b>v6.6</b>: Fixed X API authentication parameters.</li>
+<li><b>v6.0 - v6.4</b>: Externalized AI instructions to <code>prompt.txt</code>.</li>
 </ul>
 
 <h2>⚠️ Disclaimer</h2>
