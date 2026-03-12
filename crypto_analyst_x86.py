@@ -7,6 +7,7 @@ import subprocess
 import traceback
 import random
 import warnings
+import xml.etree.ElementTree as ET
 
 # ==========================================
 # Windows環境特有の絵文字・文字化けエラー防止策
@@ -22,16 +23,12 @@ warnings.simplefilter('ignore')
 os.environ['GRPC_VERBOSITY'] = 'ERROR'
 os.environ['GLOG_minloglevel'] = '2'
 
-# ==========================================
-# 設定: パス設定 & ログ機能
-# ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(BASE_DIR, "analyst_bot.log")
 ENV_FILE = os.path.join(BASE_DIR, "X-GoogleAPI.env")
 PROMPT_FILE = os.path.join(BASE_DIR, "prompt.txt")
 
 def log(message):
-    """ログをコンソールとファイルに出力"""
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     msg = f"[{timestamp}] {message}"
     print(msg, flush=True) 
@@ -40,12 +37,8 @@ def log(message):
             f.write(msg + "\n")
             f.flush()
             os.fsync(f.fileno())
-    except:
-        pass
+    except: pass
 
-# ==========================================
-# 自動インストール・ライブラリ読み込み
-# ==========================================
 def install_libraries():
     required_libs = ["google-generativeai", "requests", "tweepy", "schedule", "python-dotenv", "beautifulsoup4"]
     for lib in required_libs:
@@ -55,7 +48,7 @@ def install_libraries():
         except ImportError:
             log(f"Installing {lib}...")
             try: subprocess.check_call([sys.executable, "-m", "pip", "install", lib])
-            except Exception as e: log(f"Failed to install {lib}: {e}")
+            except Exception as e: pass
 
 try:
     import requests, tweepy, schedule, google.generativeai as genai
@@ -67,18 +60,8 @@ except ImportError:
     from dotenv import load_dotenv
     from bs4 import BeautifulSoup
 
-# .envファイルの読み込み
-if os.path.exists(ENV_FILE):
-    if load_dotenv(ENV_FILE):
-        log(f"✅ 設定ファイル '{os.path.basename(ENV_FILE)}' を読み込みました。")
-    else:
-        log(f"❌ 設定ファイル '{os.path.basename(ENV_FILE)}' の解析に失敗しました。")
-else:
-    log(f"⚠️ 設定ファイル '{os.path.basename(ENV_FILE)}' が見つかりません。")
+if os.path.exists(ENV_FILE): load_dotenv(ENV_FILE)
 
-# ==========================================
-# APIキーの取得と検証
-# ==========================================
 X_API_KEY = os.getenv("X_API_KEY")
 X_API_SECRET = os.getenv("X_API_SECRET")
 X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
@@ -88,217 +71,136 @@ CRYPTOPANIC_API_KEY = os.getenv("CRYPTOPANIC_API_KEY")
 COINGECKO_API_KEY = os.getenv("COINGECKO_API_KEY")
 
 def check_keys():
-    keys = {
-        "X_API_KEY": X_API_KEY,
-        "X_API_SECRET": X_API_SECRET,
-        "X_ACCESS_TOKEN": X_ACCESS_TOKEN,
-        "X_ACCESS_SECRET": X_ACCESS_SECRET,
-        "GEMINI_API_KEY": GEMINI_API_KEY,
-        "CRYPTOPANIC_API_KEY": CRYPTOPANIC_API_KEY
-    }
+    keys = {"X_API_KEY": X_API_KEY, "X_API_SECRET": X_API_SECRET, "X_ACCESS_TOKEN": X_ACCESS_TOKEN, "X_ACCESS_SECRET": X_ACCESS_SECRET, "GEMINI_API_KEY": GEMINI_API_KEY}
     missing = [name for name, val in keys.items() if not val]
     if missing:
         log(f"❌ 以下のAPIキーが読み込めていません: {', '.join(missing)}")
         return False
     return True
 
-# ==========================================
-# 情報収集ロジック
-# ==========================================
-
-def get_trending_coins():
-    """CoinGeckoから「今検索されているトレンド銘柄」を取得（APIキー対応）"""
-    url = "https://api.coingecko.com/api/v3/search/trending"
-    
-    headers = {"accept": "application/json"}
-    if COINGECKO_API_KEY:
-        headers["x-cg-demo-api-key"] = COINGECKO_API_KEY
-
+def get_macro_news():
+    url = "https://news.yahoo.co.jp/rss/categories/business.xml"
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status() 
-        data = response.json()
-        
-        trending = []
-        for item in data.get("coins", [])[:3]:
-            coin = item["item"]
-            trending.append(f"{coin['name']} ({coin['symbol']})")
-            
-        return "【現在のトレンド銘柄】\n" + ", ".join(trending) + "\n\n"
+        res = requests.get(url, timeout=10)
+        root = ET.fromstring(res.text)
+        headlines = []
+        for item in root.findall('.//item')[:4]:
+            headlines.append(f"・{item.find('title').text}")
+        return "【マクロ経済・株式ニュース】\n" + "\n".join(headlines) + "\n\n"
     except Exception as e:
-        log(f"⚠️ トレンド銘柄取得エラー: {e}")
+        log(f"⚠️ マクロニュース取得エラー: {e}")
         return ""
 
-def get_crypto_prices():
-    """CoinGeckoから主要銘柄の現在価格・変動率を取得（APIキー対応）"""
-    url = "https://api.coingecko.com/api/v3/simple/price"
-    params = {
-        "ids": "bitcoin,ethereum,solana", 
-        "vs_currencies": "jpy", 
-        "include_24hr_change": "true"
-    }
-    
+def get_trending_coins():
+    url = "https://api.coingecko.com/api/v3/search/trending"
     headers = {"accept": "application/json"}
-    if COINGECKO_API_KEY:
-        headers["x-cg-demo-api-key"] = COINGECKO_API_KEY
+    if COINGECKO_API_KEY: headers["x-cg-demo-api-key"] = COINGECKO_API_KEY
+    try:
+        data = requests.get(url, headers=headers, timeout=10).json()
+        trending = [f"{item['item']['name']} ({item['item']['symbol']})" for item in data.get("coins", [])[:3]]
+        return "【現在の仮想通貨トレンド銘柄】\n" + ", ".join(trending) + "\n\n"
+    except: return ""
 
+def get_crypto_prices():
+    url = "https://api.coingecko.com/api/v3/simple/price"
+    params = {"ids": "bitcoin,ethereum,solana", "vs_currencies": "jpy", "include_24hr_change": "true"}
+    headers = {"accept": "application/json"}
+    if COINGECKO_API_KEY: headers["x-cg-demo-api-key"] = COINGECKO_API_KEY
     try:
         data = requests.get(url, headers=headers, params=params, timeout=10).json()
         text = "【主要銘柄の価格データ】\n"
         for c, s in [("bitcoin","BTC"), ("ethereum","ETH"), ("solana","SOL")]:
-            if c in data: 
-                text += f"{s}: {data[c]['jpy']:,.0f}円 ({data[c]['jpy_24h_change']:.1f}%)\n"
+            if c in data: text += f"{s}: {data[c]['jpy']:,.0f}円 ({data[c]['jpy_24h_change']:.1f}%)\n"
         return text + "\n"
-    except Exception as e:
-        log(f"⚠️ 価格取得エラー: {e}")
-        return "価格データ取得失敗\n\n"
+    except: return ""
 
 def get_trending_news():
-    """CryptoPanicの公式API (v2) から最新の注目ニュースを取得"""
-    if not CRYPTOPANIC_API_KEY:
-        return "ニュースデータなし (APIキー未設定)\n"
-
+    if not CRYPTOPANIC_API_KEY: return "ニュースデータなし (APIキー未設定)\n"
     url = "https://cryptopanic.com/api/developer/v2/posts/"
-    params = {
-        "auth_token": CRYPTOPANIC_API_KEY,
-        "public": "true",
-        "regions": "en",        
-        "filter": "hot",        
-        "kind": "news"
-    }
-
+    params = {"auth_token": CRYPTOPANIC_API_KEY, "public": "true", "regions": "en", "filter": "hot", "kind": "news"}
     try:
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status() 
-        data = response.json()
-        
+        data = requests.get(url, params=params, timeout=10).json()
         headlines = []
         for item in data.get("results", [])[:5]:
-            title = item.get("title", "No Title")
-            votes = item.get("votes", {})
-            positive = votes.get("positive", 0)
-            important = votes.get("important", 0)
-            headlines.append(f"・{title} (強気: {positive}票, 重要: {important}票)")
-            
-        return "【注目の最新ホットニュース】\n" + "\n".join(headlines)
+            headlines.append(f"・{item.get('title')} (強気: {item.get('votes', {}).get('positive', 0)}票)")
+        return "【注目の仮想通貨ニュース】\n" + "\n".join(headlines)
+    except: return ""
 
-    except Exception as e:
-        log(f"⚠️ ニュース取得エラー: {e}")
-        return f"ニュースの取得に失敗: {e}"
+def get_last_tweet():
+    if not os.path.exists(LOG_FILE): return "まだ過去のツイートはありません。"
+    try:
+        with open(LOG_FILE, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        for i in range(len(lines)-1, -1, -1):
+            if "--- ツイート ---" in lines[i] and i + 1 < len(lines):
+                return lines[i+1].strip()
+    except: pass
+    return "取得に失敗しました。"
 
 def load_prompt():
-    if not os.path.exists(PROMPT_FILE):
-        log(f"❌ エラー: '{os.path.basename(PROMPT_FILE)}' が見つかりません。")
-        return None
-    try:
-        # ここは既に完璧！Windowsでも文字化けしない設定になっています
-        with open(PROMPT_FILE, "r", encoding="utf-8") as f:
-            content = f.read().strip()
-            return content if content else None
-    except: return None
+    if not os.path.exists(PROMPT_FILE): return None
+    with open(PROMPT_FILE, "r", encoding="utf-8") as f:
+        return f.read().strip()
 
-def generate_analysis_tweet(market_data):
-    """Geminiを使ってツイート本文を生成する"""
+def generate_analysis_tweet(market_data, last_tweet):
     if not GEMINI_API_KEY: return None
     genai.configure(api_key=GEMINI_API_KEY)
-    
     prompt_template = load_prompt()
-    if not prompt_template:
-        log("⚠️ プロンプトが読み込めないため、生成を中止します。")
-        return None
+    if not prompt_template: return None
 
     models_to_try = ['gemini-3.1-pro-preview', 'gemini-3-flash-preview']
-
     for model_name in models_to_try:
         try:
             model = genai.GenerativeModel(model_name)
-            prompt = prompt_template.replace("{market_data}", market_data)
+            prompt = prompt_template.replace("{market_data}", market_data).replace("{last_tweet}", last_tweet)
             response = model.generate_content(prompt, generation_config={"temperature": 0.85})
             text = response.text.strip()
-            
-            # 長さチェック（デバッグログを追加）
-            log(f"生成された文字数: {len(text)}文字")
-            
-            if len(text) > 140:
-                 log("⚠️ 140文字を超過したため、後半をカットして調整します")
-                 text = text[:137] + "..."
-                 
-            log(f"✨ 使用モデル: {model_name}")
+            log(f"✨ 使用モデル: {model_name} (生成文字数: {len(text)})")
+            if len(text) > 140: text = text[:137] + "..."
             return text
-        except Exception as e:
-            time.sleep(2); continue
+        except Exception as e: time.sleep(2); continue
     return None
 
 def job():
     log("分析を開始します...")
     if not check_keys(): return
     
-    market_data = get_trending_coins() + get_crypto_prices() + get_trending_news()
-    tweet_text = generate_analysis_tweet(market_data)
+    market_data = get_macro_news() + get_trending_coins() + get_crypto_prices() + get_trending_news()
+    last_tweet = get_last_tweet()
+    log(f"🧠 前回の発言を記憶しました: {last_tweet[:20]}...")
+    
+    tweet_text = generate_analysis_tweet(market_data, last_tweet)
     
     if tweet_text:
         log(f"--- ツイート ---\n{tweet_text}")
-        
-        MAX_RETRIES = 3 
-        
-        for attempt in range(1, MAX_RETRIES + 1):
+        for attempt in range(1, 4):
             try:
-                client = tweepy.Client(
-                    consumer_key=X_API_KEY, 
-                    consumer_secret=X_API_SECRET, 
-                    access_token=X_ACCESS_TOKEN, 
-                    access_token_secret=X_ACCESS_SECRET
-                )
+                client = tweepy.Client(consumer_key=X_API_KEY, consumer_secret=X_API_SECRET, access_token=X_ACCESS_TOKEN, access_token_secret=X_ACCESS_SECRET)
                 client.create_tweet(text=tweet_text)
                 log("✅ 投稿成功！")
                 break 
-                
             except Exception as e:
                 error_msg = str(e)
                 if "503" in error_msg or "Service Unavailable" in error_msg:
-                    if attempt < MAX_RETRIES:
-                        wait_time = 30 * attempt 
-                        log(f"⚠️ Xサーバー混雑(503)。{wait_time}秒後にリトライします ({attempt}/{MAX_RETRIES})...")
-                        time.sleep(wait_time)
-                    else:
-                        log(f"❌ {MAX_RETRIES}回リトライしましたが、投稿できませんでした: {e}")
+                    if attempt < 3:
+                        time.sleep(30 * attempt)
                 else:
                     log(f"❌ 投稿エラー: {e}")
                     break
-    else: 
-        log("分析をスキップしました。")
+    else: log("分析をスキップしました。")
 
 def main():
-    log("=== AI Crypto Analyst Bot (Windows V7.0) Started ===")
-    check_keys()
-    now = datetime.datetime.now()
-    is_utc = abs((now - datetime.datetime.utcnow()).total_seconds()) < 60
-    
-    # Windows環境のスケジュール補正
-    if is_utc:
-        schedule.every().day.at("16:45").do(job)
-        schedule.every().day.at("22:45").do(job)
-        schedule.every().day.at("02:45").do(job)
-        schedule.every().day.at("08:45").do(job)
-        schedule.every().day.at("12:45").do(job)
+    log("=== AI Crypto Analyst Bot (Windows V8.0) Started ===")
+    if abs((datetime.datetime.now() - datetime.datetime.utcnow()).total_seconds()) < 60:
+        for t in ["16:45", "22:45", "02:45", "08:45", "12:45"]: schedule.every().day.at(t).do(job)
     else:
-        schedule.every().day.at("01:45").do(job)
-        schedule.every().day.at("07:45").do(job)
-        schedule.every().day.at("11:45").do(job)
-        schedule.every().day.at("17:45").do(job)
-        schedule.schedule.every().day.at("21:45").do(job)
+        for t in ["01:45", "07:45", "11:45", "17:45", "21:45"]: schedule.every().day.at(t).do(job)
 
     job() 
     log("スケジュール待機中...")
     while True:
-        try:
-            schedule.run_pending()
-            time.sleep(60)
-        except KeyboardInterrupt:
-            break
-        except Exception as e:
-            log(f"メインループエラー: {e}")
-            time.sleep(60)
+        schedule.run_pending()
+        time.sleep(60)
 
 if __name__ == "__main__":
     main()
