@@ -2,19 +2,19 @@
 <a href="README.md">日本語</a> | <strong>English</strong>
 </div>
 
-<h1>AI Crypto Analyst Bot (Trend Deep-Dive Edition) 📈🤖</h1>
+<h1>AI Crypto Analyst Bot (Macro & Memory Edition) 📈🤖</h1>
 
-A Python-based bot powered by Google Gemini AI (the latest <b>3.1 Pro Preview</b>) that scans trending cryptocurrency search data and hot news streams with community sentiment (votes). Instead of generic market summaries, it dives deep into specific hot topics (like meme coins or viral news) and automatically posts sharp, insightful tweets to X (formerly Twitter).
+A Python-based bot powered by Google Gemini AI (the latest <b>3.1 Pro Preview</b>). It scans not only trending cryptocurrency data and hot news but also US/Japan stock markets and macro-economy trends. It automatically posts sharp, insightful tweets to X (formerly Twitter) acting as a professional full-time investor.
 
 It includes dedicated execution files for both Windows (Desktop) and Linux (Servers). Character settings and tone can be freely customized via an external text file.
 
-<h2>✨ Features</h2>
+<h2>✨ Features (V8 Update)</h2>
 
 <ul>
-<li><b>AI Single-Topic Deep Dive:</b> Bypasses boring, weather-report-style market summaries. <b>Gemini 3.1 Pro</b> focuses on specific trends ("Why is this obscure coin trending?" or "What's the hidden motive behind this news?") to share professional and unique trading insights.</li>
-<li><b>Sentiment & Trend Detection:</b> Combines CryptoPanic API (v2) for community vote data (Bullish/Important) and CoinGecko API for real-time global "Trending Searches," ensuring the AI is always fed the freshest narratives.</li>
+<li><b>Macro Economy & Stock News Integration:</b> Automatically fetches RSS feeds from Yahoo Finance. The AI observes the crypto market from a broader macro perspective, analyzing how stock market risk-off scenarios or interest rate changes affect crypto liquidity.</li>
+<li><b>Memory (Topic Repetition Avoidance):</b> The bot reads its own most recent tweet from the log file, ensuring it never repeats the same topic or analytical angle twice in a row.</li>
+<li><b>5 Dynamic AI Approaches:</b> Bypasses boring market summaries. The AI automatically selects one of five distinct attitudes based on the daily data: Macro analysis, Rumor fact-checking, Harsh token reviews, Cooling down FOMO, or Declaring a "No-Trade" day.</li>
 <li><b>Robust Error Handling (Auto-Retry):</b> Equipped with a resilient logic that prevents crashes and automatically retries after a few minutes when encountering X API server overloads (e.g., 503 Service Unavailable).</li>
-<li><b>Privacy & Prompt Externalization:</b> Character personas and AI instructions are safely isolated in <code>prompt.txt</code>, and API keys in <code>X-GoogleAPI.env</code>. You can safely publish your code to GitHub without leaking sensitive data or your secret trading prompts.</li>
 </ul>
 
 <h2>⚙️ Prerequisites (Get API Keys)</h2>
@@ -72,24 +72,32 @@ CRYPTOPANIC_API_KEY=YOUR_CRYPTOPANIC_AUTH_TOKEN
 COINGECKO_API_KEY=YOUR_COINGECKO_DEMO_API_KEY</code></pre>
 
 <b>② AI Prompt Config:</b> <code>prompt.txt</code>
-Define the AI's instructions, tone, and persona here.
-Note: The variable <code>{market_data}</code> is a required placeholder where the script injects data.
+Define the AI's instructions, tone, and the 5 approaches here.
+Note: The variables <code>{market_data}</code> and <code>{last_tweet}</code> are required placeholders where the script injects data.
 
-<pre><code>You are an experienced and intelligent young female full-time crypto trader.
-Scan the "Latest Market Data (trending coins, prices, hot news with community votes)" below and pick 【ONE highly interesting specific topic (coin or news)】.
+<pre><code>You are an experienced and intelligent young female full-time investor (crypto & stocks).
+Read the "Latest Data (stock/macro news, crypto trends)" below and pick ONE most interesting topic.
 
-【Latest Market Data】
+【Latest Data】
 {market_data}
 
-【Your Thought/Output Process】
-Absolutely DO NOT provide a generic "weather report" summary of the whole market.
-Focus on just ONE theme from the data and deploy a 【sharp, unique perspective】 as a pro trader (e.g., "Why is this catching on right now?").
-Based on your insight, create a 【free-form market tweet】 for your followers.
+【Your Recent Tweet (Memory)】
+{last_tweet}
+
+【Your Thought/Output Process (Strict)】
+1. Absolutely AVOID talking about the same topic or using the same angle as your {last_tweet}.
+2. Choose exactly ONE of the following "5 Approaches" that best fits the data and your current mood, and draft your tweet.
+
+Approach 1: [Macro & Stocks] Analyze how recent US/Japan stock market or interest rate movements will affect crypto liquidity.
+Approach 2: [Fact-Check] Cool down the hype around a trending rumor or political meme coin by pointing out the lack of official sources.
+Approach 3: [Harsh Token Review] Answer an imaginary follower's question about a trending token. Summarize its tech/reality harshly (or dismiss it as a gamble if unknown).
+Approach 4: [Cooling FOMO] When the timeline is overly bullish, take a contrarian view. Warn about "sell-the-fact" scenarios or "shoeshine boy" signals.
+Approach 5: [No-Trade Declaration] If the data is just noise with no edge, declare that you won't trade today and are just closing the charts to drink tea.
 
 【Output Format】
 Keep it concise within 120 characters (under 140 including hashtags).
-Use an elegant, intelligent, and confident female tone.
-Add relevant hashtags (like the ticker of the chosen coin) at the end.</code></pre>
+Use an elegant, confident, and slightly sarcastic female tone (using "I").
+Add relevant hashtags at the end.</code></pre>
 
 <hr>
 
@@ -103,11 +111,6 @@ python -c "from crypto_analyst_x86 import job; job()"
 
 # To run continuously on a schedule:
 python crypto_analyst_x86.py</code></pre>
-
-<ul>
-<li>Necessary libraries will be installed automatically on the first run.</li>
-<li>The bot will automatically post based on the schedule as long as the terminal is open.</li>
-</ul>
 
 <hr>
 
@@ -134,16 +137,12 @@ tail -f analyst_bot.log
 # To stop the bot
 pkill -f crypto_analyst_linux.py</code></pre>
 
-<ul>
-<li><b>UTC Auto-Correction:</b> Automatically adjusts posting times to JST schedules if the server timezone is UTC.</li>
-</ul>
-
 <h2>🕒 Changelog</h2>
 
 <ul>
-<li><b>v7.0</b>: Evolved to "Trend Deep-Dive Edition". Integrated CryptoPanic API (v2) and CoinGecko API. Implemented auto-retry for X API 503 errors. Split into dedicated x86 (Windows) and Linux scripts for better stability.</li>
+<li><b>v8.0</b>: Evolved to "Macro & Memory Edition". Added macro-economy RSS integration (Yahoo Finance). Implemented "Memory" to read recent tweets from logs to avoid topic repetition. Expanded prompt to 5 dynamic approaches.</li>
+<li><b>v7.0</b>: Integrated CryptoPanic API (v2) and CoinGecko API. Implemented auto-retry for X API 503 errors.</li>
 <li><b>v6.6</b>: Fixed X API authentication parameters.</li>
-<li><b>v6.0 - v6.4</b>: Externalized AI instructions to <code>prompt.txt</code>.</li>
 </ul>
 
 <h2>⚠️ Disclaimer</h2>
