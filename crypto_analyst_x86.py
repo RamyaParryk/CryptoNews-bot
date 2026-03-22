@@ -9,16 +9,10 @@ import random
 import warnings
 import xml.etree.ElementTree as ET
 
-# ==========================================
-# Windows環境特有の絵文字・文字化けエラー防止策
-# ==========================================
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
-# ==========================================
-# 警告メッセージの抑制
-# ==========================================
 warnings.simplefilter('ignore')
 os.environ['GRPC_VERBOSITY'] = 'ERROR'
 os.environ['GLOG_minloglevel'] = '2'
@@ -126,23 +120,29 @@ def get_trending_news():
         return "【注目の仮想通貨ニュース】\n" + "\n".join(headlines)
     except: return ""
 
-def get_last_tweet():
+def get_recent_tweets(limit=10):
     if not os.path.exists(LOG_FILE): return "まだ過去のツイートはありません。"
+    tweets = []
     try:
         with open(LOG_FILE, "r", encoding="utf-8") as f:
             lines = f.readlines()
         for i in range(len(lines)-1, -1, -1):
             if "--- ツイート ---" in lines[i] and i + 1 < len(lines):
-                return lines[i+1].strip()
+                tweet = lines[i+1].strip()
+                if tweet not in tweets:
+                    tweets.append(tweet)
+                if len(tweets) >= limit:
+                    break
     except: pass
-    return "取得に失敗しました。"
+    if not tweets: return "取得に失敗しました。"
+    return "\n".join([f"・{t}" for t in tweets])
 
 def load_prompt():
     if not os.path.exists(PROMPT_FILE): return None
     with open(PROMPT_FILE, "r", encoding="utf-8") as f:
         return f.read().strip()
 
-def generate_analysis_tweet(market_data, last_tweet):
+def generate_analysis_tweet(market_data, recent_tweets):
     if not GEMINI_API_KEY: return None
     genai.configure(api_key=GEMINI_API_KEY)
     prompt_template = load_prompt()
@@ -152,7 +152,7 @@ def generate_analysis_tweet(market_data, last_tweet):
     for model_name in models_to_try:
         try:
             model = genai.GenerativeModel(model_name)
-            prompt = prompt_template.replace("{market_data}", market_data).replace("{last_tweet}", last_tweet)
+            prompt = prompt_template.replace("{market_data}", market_data).replace("{recent_tweets}", recent_tweets)
             response = model.generate_content(prompt, generation_config={"temperature": 0.85})
             text = response.text.strip()
             log(f"✨ 使用モデル: {model_name} (生成文字数: {len(text)})")
@@ -166,10 +166,12 @@ def job():
     if not check_keys(): return
     
     market_data = get_macro_news() + get_trending_coins() + get_crypto_prices() + get_trending_news()
-    last_tweet = get_last_tweet()
-    log(f"🧠 前回の発言を記憶しました: {last_tweet[:20]}...")
+    recent_tweets = get_recent_tweets()
     
-    tweet_text = generate_analysis_tweet(market_data, last_tweet)
+    log_preview = recent_tweets.replace('\n', ' ')
+    log(f"🧠 直近10回の発言を記憶しました: {log_preview[:30]}...")
+    
+    tweet_text = generate_analysis_tweet(market_data, recent_tweets)
     
     if tweet_text:
         log(f"--- ツイート ---\n{tweet_text}")
@@ -190,7 +192,7 @@ def job():
     else: log("分析をスキップしました。")
 
 def main():
-    log("=== AI Crypto Analyst Bot (Windows V8.0) Started ===")
+    log("=== AI Crypto Analyst Bot (Windows V8.2) Started ===")
     if abs((datetime.datetime.now() - datetime.datetime.utcnow()).total_seconds()) < 60:
         for t in ["16:45", "22:45", "02:45", "08:45", "12:45"]: schedule.every().day.at(t).do(job)
     else:

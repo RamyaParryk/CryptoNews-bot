@@ -9,16 +9,10 @@ import random
 import warnings
 import xml.etree.ElementTree as ET
 
-# ==========================================
-# 警告メッセージの抑制
-# ==========================================
 warnings.simplefilter('ignore')
 os.environ['GRPC_VERBOSITY'] = 'ERROR'
 os.environ['GLOG_minloglevel'] = '2'
 
-# ==========================================
-# 設定: パス設定 & ログ機能
-# ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(BASE_DIR, "analyst_bot.log")
 ENV_FILE = os.path.join(BASE_DIR, "X-GoogleAPI.env")
@@ -36,9 +30,6 @@ def log(message):
     except:
         pass
 
-# ==========================================
-# 自動インストール・ライブラリ読み込み
-# ==========================================
 def install_libraries():
     required_libs = ["google-generativeai", "requests", "tweepy", "schedule", "python-dotenv", "beautifulsoup4"]
     for lib in required_libs:
@@ -62,7 +53,6 @@ except ImportError:
 
 if os.path.exists(ENV_FILE): load_dotenv(ENV_FILE)
 
-# APIキーの取得
 X_API_KEY = os.getenv("X_API_KEY")
 X_API_SECRET = os.getenv("X_API_SECRET")
 X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
@@ -79,11 +69,7 @@ def check_keys():
         return False
     return True
 
-# ==========================================
-# 情報収集ロジック（株・マクロ経済を追加）
-# ==========================================
 def get_macro_news():
-    """Yahoo!ニュースの経済カテゴリから日米株やマクロ情報を取得"""
     url = "https://news.yahoo.co.jp/rss/categories/business.xml"
     try:
         res = requests.get(url, timeout=10)
@@ -131,29 +117,30 @@ def get_trending_news():
         return "【注目の仮想通貨ニュース】\n" + "\n".join(headlines)
     except: return ""
 
-# ==========================================
-# 記憶力（前回のツイートを読み込む）
-# ==========================================
-def get_last_tweet():
+# 過去10回分を取得するように limit=10 に変更
+def get_recent_tweets(limit=10):
     if not os.path.exists(LOG_FILE): return "まだ過去のツイートはありません。"
+    tweets = []
     try:
         with open(LOG_FILE, "r", encoding="utf-8") as f:
             lines = f.readlines()
         for i in range(len(lines)-1, -1, -1):
             if "--- ツイート ---" in lines[i] and i + 1 < len(lines):
-                return lines[i+1].strip()
+                tweet = lines[i+1].strip()
+                if tweet not in tweets:
+                    tweets.append(tweet)
+                if len(tweets) >= limit:
+                    break
     except: pass
-    return "取得に失敗しました。"
+    if not tweets: return "取得に失敗しました。"
+    return "\n".join([f"・{t}" for t in tweets])
 
-# ==========================================
-# AI生成ロジック
-# ==========================================
 def load_prompt():
     if not os.path.exists(PROMPT_FILE): return None
     with open(PROMPT_FILE, "r", encoding="utf-8") as f:
         return f.read().strip()
 
-def generate_analysis_tweet(market_data, last_tweet):
+def generate_analysis_tweet(market_data, recent_tweets):
     if not GEMINI_API_KEY: return None
     genai.configure(api_key=GEMINI_API_KEY)
     prompt_template = load_prompt()
@@ -163,7 +150,7 @@ def generate_analysis_tweet(market_data, last_tweet):
     for model_name in models_to_try:
         try:
             model = genai.GenerativeModel(model_name)
-            prompt = prompt_template.replace("{market_data}", market_data).replace("{last_tweet}", last_tweet)
+            prompt = prompt_template.replace("{market_data}", market_data).replace("{recent_tweets}", recent_tweets)
             response = model.generate_content(prompt, generation_config={"temperature": 0.85})
             text = response.text.strip()
             log(f"✨ 使用モデル: {model_name} (生成文字数: {len(text)})")
@@ -177,10 +164,12 @@ def job():
     if not check_keys(): return
     
     market_data = get_macro_news() + get_trending_coins() + get_crypto_prices() + get_trending_news()
-    last_tweet = get_last_tweet()
-    log(f"🧠 前回の発言を記憶しました: {last_tweet[:20]}...")
+    recent_tweets = get_recent_tweets()
     
-    tweet_text = generate_analysis_tweet(market_data, last_tweet)
+    log_preview = recent_tweets.replace('\n', ' ')
+    log(f"🧠 直近10回の発言を記憶しました: {log_preview[:30]}...")
+    
+    tweet_text = generate_analysis_tweet(market_data, recent_tweets)
     
     if tweet_text:
         log(f"--- ツイート ---\n{tweet_text}")
@@ -201,7 +190,7 @@ def job():
     else: log("分析をスキップしました。")
 
 def main():
-    log("=== AI Crypto Analyst Bot (Macro & Memory V8.0) Started ===")
+    log("=== AI Crypto Analyst Bot (Macro & Memory V8.2) Started ===")
     if abs((datetime.datetime.now() - datetime.datetime.utcnow()).total_seconds()) < 60:
         for t in ["16:45", "22:45", "02:45", "08:45", "12:45"]: schedule.every().day.at(t).do(job)
     else:
