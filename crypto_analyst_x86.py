@@ -119,8 +119,8 @@ def get_trending_news():
             headlines.append(f"・{item.get('title')} (強気: {item.get('votes', {}).get('positive', 0)}票)")
         return "【注目の仮想通貨ニュース】\n" + "\n".join(headlines)
     except: return ""
-
-def get_recent_tweets(limit=10):
+# 過去50回分を取得する
+def get_recent_tweets(limit=50):
     if not os.path.exists(LOG_FILE): return "まだ過去のツイートはありません。"
     tweets = []
     try:
@@ -169,7 +169,7 @@ def job():
     recent_tweets = get_recent_tweets()
     
     log_preview = recent_tweets.replace('\n', ' ')
-    log(f"🧠 直近10回の発言を記憶しました: {log_preview[:30]}...")
+    log(f"🧠 直近50回の発言を記憶しました: {log_preview[:30]}...")
     
     tweet_text = generate_analysis_tweet(market_data, recent_tweets)
     
